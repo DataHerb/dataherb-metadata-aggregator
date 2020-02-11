@@ -116,9 +116,9 @@ def generate_markdown(herb_name, herb_metadata):
     :param herb_metadata: metadata of a herb
     :type herb_metadata: dict
     """
-
+    jekyll_title = herb_metadata.get("name", herb_metadata)
     herb_metadata_jekyll = yaml.dump(herb_metadata)
-    herb_metadata_jekyll = "---\ndataset_id: {}\n{}\n---".format(herb_name, herb_metadata_jekyll)
+    herb_metadata_jekyll = "---\ntitle: {}\ndataset_id: {}\n{}\n---".format(jekyll_title, herb_name, herb_metadata_jekyll)
 
     return herb_metadata_jekyll
 
