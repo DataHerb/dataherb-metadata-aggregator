@@ -16,7 +16,7 @@ __location__ = os.path.realpath(
 )
 _FLORA_BASE_FOLDER = "flora"
 _FLORA_TRANSFORMED_FOLDER = "build"
-_FLORA_JEKYLL_FOLDER = "_datasets"
+_FLORA_JEKYLL_FOLDER = "_flora"
 
 logger.debug(
     f"__cwd__ is {__cwd__}"
