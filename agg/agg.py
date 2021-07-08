@@ -70,6 +70,42 @@ def flora_metadata(flora_files):
     return flora_meta
 
 
+def dataherb_parse_meta_from_url(link, flora_herb_meta):
+    herb_repository_meta_response = _get_page_html(link.get("url"))
+    if herb_repository_meta_response.get("status") == 200:
+        try:
+            herb_repository_meta = yaml.load(
+                herb_repository_meta_response.get("page").content, Loader=yaml.FullLoader
+            )
+            # herb_repository_meta = herb_repository_meta[0]
+            # Backward compactibility
+            # in the first few versions,
+            # metadata.yml was stored in the dataset folder
+            # and path of files did not include the folder name
+            # will be deprecated
+            if link.get("folder") == "dataset":
+                herb_repository_meta_data = herb_repository_meta["data"]
+                herb_repository_meta_data_new = []
+                for data in herb_repository_meta_data:
+                    data_new = data.copy()
+                    data_new["path"] = "dataset/{}".format(data_new.get("path"))
+                    herb_repository_meta_data_new.append(data_new)
+                herb_repository_meta["data"] = herb_repository_meta_data_new
+        except:
+            pass
+        # merge flora metadata and herbs metadata
+        flora_herb_meta = {
+            **flora_herb_meta,
+            **herb_repository_meta
+        }
+        logger.debug("END: retrieved flora metadata")
+
+    elif herb_repository_meta_response.get("status") == 404:
+        logger.debug("herb_repository_meta_response was 404")
+
+    return flora_herb_meta
+
+
 def load_herb_metadata(herb_name, flora_herb_meta):
     """
     load_herb_metadata loads the metadata of the herb using the specific repository in flora
@@ -83,7 +119,26 @@ def load_herb_metadata(herb_name, flora_herb_meta):
     logger.debug("BEGIN: retrieve flora metadata")
 
     herb_repository = flora_herb_meta.get("repository")
+    herb_repository_datapackage_link = [
+        {
+            "folder": "dataset",
+            "url": f"https://raw.githubusercontent.com/{herb_repository}/master/datapackage.json"
+        },
+        {
+            "folder": "dataset",
+            "url": f"https://raw.githubusercontent.com/{herb_repository}/master/dataset/datapackage.json"
+        }
+    ]
+
     herb_repository_meta_link = [
+        {
+            "folder": "dataset",
+            "url": f"https://raw.githubusercontent.com/{herb_repository}/master/datapackage.json"
+        },
+        {
+            "folder": "dataset",
+            "url": f"https://raw.githubusercontent.com/{herb_repository}/master/dataset/datapackage.json"
+        },
         {
             "folder": ".dataherb",
             "url": f"https://raw.githubusercontent.com/{herb_repository}/master/.dataherb/metadata.yml"
@@ -95,39 +150,7 @@ def load_herb_metadata(herb_name, flora_herb_meta):
     ]
 
     for link in herb_repository_meta_link:
-        herb_repository_meta_response = _get_page_html(link.get("url"))
-        if herb_repository_meta_response.get("status") == 200:
-            try:
-                herb_repository_meta = yaml.load(
-                    herb_repository_meta_response.get("page").content, Loader=yaml.FullLoader
-                )
-                # herb_repository_meta = herb_repository_meta[0]
-                # Backward compactibility
-                # in the first few versions,
-                # metadata.yml was stored in the dataset folder
-                # and path of files did not include the folder name
-                # will be deprecated
-                if link.get("folder") == "dataset":
-                    herb_repository_meta_data = herb_repository_meta["data"]
-                    herb_repository_meta_data_new = []
-                    for data in herb_repository_meta_data:
-                        data_new = data.copy()
-                        data_new["path"] = "dataset/{}".format(data_new.get("path"))
-                        herb_repository_meta_data_new.append(data_new)
-                    herb_repository_meta["data"] = herb_repository_meta_data_new
-            except:
-                pass
-            # merge flora metadata and herbs metadata
-            flora_herb_meta = {
-                **flora_herb_meta,
-                **herb_repository_meta
-            }
-            logger.debug("END: retrieved flora metadata")
-
-            return flora_herb_meta
-
-        elif herb_repository_meta_response.get("status") == 404:
-            logger.debug("herb_repository_meta_response was 404")
+        flora_herb_meta = dataherb_parse_meta_from_url(link, flora_herb_meta)
 
     logger.warning(f"Could not find metadata for {herb_name} in specific repository {herb_repository}")
 
